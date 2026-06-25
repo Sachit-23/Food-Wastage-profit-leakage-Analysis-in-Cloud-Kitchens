@@ -1,11 +1,13 @@
 CREATE DATABASE food_wastage_analysis;
 USE food_wastage_analysis;
 
+
 CREATE TABLE kitchens (
-    kitchen_id INT PRIMARY KEY AUTO_INCREMENT,
+    kitchen_id INT PRIMARY KEY,
     city VARCHAR(100),
-    kitchen_type VARCHAR(100),
-    manager_name VARCHAR(100)
+    kitchen_type VARCHAR(50),
+    manager_name VARCHAR(100),
+    opening_date DATE
 );
 
 CREATE TABLE menu_items (
@@ -18,14 +20,17 @@ CREATE TABLE menu_items (
 );
 
 CREATE TABLE orders (
-    order_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT PRIMARY KEY,
     order_date DATETIME,
     kitchen_id INT,
     item_id INT,
     quantity_sold INT,
     selling_price DECIMAL(10,2),
-
-    FOREIGN KEY (kitchen_id) REFERENCES kitchens(kitchen_id),
+    order_status VARCHAR(30),
+    delivery_time_minutes INT,
+    customer_rating DECIMAL(3,1),
+    
+	FOREIGN KEY (kitchen_id) REFERENCES kitchens(kitchen_id),
     FOREIGN KEY (item_id) REFERENCES menu_items(item_id)
 );
 
@@ -44,6 +49,7 @@ CREATE TABLE inventory (
 CREATE TABLE wastage_logs (
     waste_id INT PRIMARY KEY AUTO_INCREMENT,
     item_id INT,
+	kitchen_id INT,
     waste_quantity INT,
     waste_reason VARCHAR(100),
     waste_cost DECIMAL(10,2),
@@ -52,21 +58,49 @@ CREATE TABLE wastage_logs (
     FOREIGN KEY (item_id) REFERENCES menu_items(item_id)
 );
 
+
 INSERT INTO kitchens (city, kitchen_type, manager_name)
 VALUES
-('Mumbai', 'Cloud Kitchen', 'Rahul Sharma'),
-('Delhi', 'QSR', 'Priya Mehta'),
-('Bangalore', 'Buffet Kitchen', 'Amit Verma'),
-('Pune', 'Cloud Kitchen', 'Sneha Joshi');
+('Mumbai','Cloud Kitchen','Rahul Sharma'),
+('Delhi','QSR','Priya Mehta'),
+('Bangalore','Cloud Kitchen','Amit Verma'),
+('Pune','Cloud Kitchen','Sneha Joshi'),
+('Hyderabad','QSR','Rohit Patel'),
+('Chennai','Cloud Kitchen','Anjali Nair'),
+('Kolkata','Buffet Kitchen','Sourav Das'),
+('Ahmedabad','Cloud Kitchen','Karan Shah'),
+('Jaipur','QSR','Neha Singh'),
+('Lucknow','Cloud Kitchen','Vivek Gupta');
+
 
 INSERT INTO menu_items
 (item_name, category, shelf_life_hours, ingredient_cost, selling_price)
 VALUES
-('Paneer Wrap', 'Fast Food', 6, 80, 220),
-('Veg Biryani', 'Main Course', 8, 120, 300),
-('Chicken Burger', 'Fast Food', 5, 90, 250),
-('Pasta Alfredo', 'Italian', 4, 110, 320),
-('Chocolate Shake', 'Beverage', 3, 60, 180);
+('Paneer Wrap','Fast Food',6,80,220),
+('Veg Biryani','Main Course',8,120,300),
+('Chicken Burger','Fast Food',5,90,250),
+('Pasta Alfredo','Italian',4,110,320),
+('Chocolate Shake','Beverage',3,60,180),
+('Paneer Tikka','Starter',5,100,280),
+('Chicken Tikka','Starter',5,130,340),
+('Veg Pizza','Italian',6,140,380),
+('Chicken Pizza','Italian',6,170,450),
+('Hakka Noodles','Chinese',7,90,240),
+('Fried Rice','Chinese',7,95,250),
+('Manchurian','Chinese',5,85,220),
+('Masala Dosa','South Indian',4,40,140),
+('Idli Sambar','South Indian',4,35,120),
+('Butter Chicken','Main Course',8,180,480),
+('Dal Makhani','Main Course',8,90,260),
+('Chole Bhature','North Indian',5,60,180),
+('Pav Bhaji','Street Food',5,50,170),
+('Vada Pav','Street Food',3,20,80),
+('Cold Coffee','Beverage',3,45,160),
+('Mango Shake','Beverage',3,55,170),
+('Brownie','Dessert',4,50,190),
+('Gulab Jamun','Dessert',6,25,100),
+('Ice Cream Sundae','Dessert',3,45,180),
+('Paneer Roll','Fast Food',5,70,210);
 
 INSERT INTO orders
 (order_date, kitchen_id, item_id, quantity_sold, selling_price)
@@ -97,73 +131,21 @@ Values
 (4, 5, 'Cooking Error', 550, '2026-05-02 22:15:00'),
 (5, 15, 'Poor Storage', 900, '2026-05-02 23:00:00');
 
-SELECT * FROM kitchens;
-SELECT * FROM menu_items;
-SELECT * FROM orders;
 
+USE food_wastage_analysis;
 
-Delimiter $$
-
-Create procedure generate_orders()
-begin
-
-   declare i INT default  1;
-   
-   while i <= 5000 DO
-   
-      insert INTO orders
-      (
-          order_date,
-          kitchen_id,
-          item_id,
-          quantity_sold,
-          selling_price
-	 )
-     
-     values
-     (
-         DATE_ADD(
-			'2026-01-01',
-            INterval floor(rand()*180) day
-		) + interval floor(rand()*24) hour,
-        
-        floor(1 + (Rand()*4)),
-        floor(1 + (Rand()*5)),
-        floor(1+ (Rand()*6)),
-        floor(150 +(rand()*300))
-	   );
-    
-       SET i = i + 1;
-    
-    End while;
-    
-END $$
-
-Delimiter  ;
+SELECT COUNT(*) AS kitchens_count FROM kitchens;
+SELECT COUNT(*) AS menu_count FROM menu_items;
+SELECT COUNT(*) AS orders_count FROM orders;
+SELECT COUNT(*) AS inventory_count FROM inventory;
 
 
 
-CALL generate_orders();
+-- Total Sales
+select
+Sum(quantity_sold * selling_price) AS total_sales
+from orders;
 
-SET SQL_SAFE_UPDATES = 0;
-
-UPDATE orders
-SET quantity_sold = quantity_sold + 3
-WHERE DAYOFWEEK(order_date) IN (1,7);
-
-UPDATE orders
-SET quantity_sold = quantity_sold + 5
-WHERE DATE(order_date) IN ('2026-01-26','2026-02-14','2026-03-08'); 
-
-ALTER TABLE orders
-ADD COLUMN order_status VARCHAR(50);
-
-UPDATE orders
-SET order_status =
-CASE
-    WHEN RAND() < 0.08 THEN 'Cancelled'
-    ELSE 'Completed'
-END;
 
 
 -- MOST WASTEFUL ITEMS
@@ -190,3 +172,129 @@ JOIN menu_items m
 ON o.item_id = m.item_id
 GROUP BY m.item_name
 ORDER BY gross_profit DESC;
+
+
+-- Kitchen Wise Wastage
+SELECT
+k.city,
+SUM(i.wasted_quantity) AS total_waste
+FROM inventory i
+JOIN kitchens k
+ON i.kitchen_id = k.kitchen_id
+GROUP BY k.city
+ORDER BY total_waste DESC;
+
+
+-- Profit Generated Per Item
+SELECT
+    m.item_name,
+    SUM(o.quantity_sold * o.selling_price) AS revenue,
+    SUM(o.quantity_sold * m.ingredient_cost) AS ingredient_cost,
+    SUM(o.quantity_sold * o.selling_price)
+      - SUM(o.quantity_sold * m.ingredient_cost) AS gross_profit
+FROM orders o
+JOIN menu_items m
+ON o.item_id = m.item_id
+GROUP BY m.item_name
+ORDER BY gross_profit DESC;
+
+
+-- Wastage Percentage
+SELECT
+    ingredient_name,
+    purchase_quantity,
+    wasted_quantity,
+
+    ROUND(
+        (wasted_quantity / purchase_quantity) * 100,
+        2
+    ) AS wastage_percentage
+FROM inventory
+ORDER BY wastage_percentage DESC;
+
+
+-- Peak Wastage Hours
+SELECT
+    HOUR(waste_date) AS waste_hour,
+    SUM(waste_cost) AS total_loss
+FROM wastage_logs
+GROUP BY waste_hour
+ORDER BY total_loss DESC;
+
+
+-- Top Selling Food Item
+SELECT
+m.item_name,
+SUM(o.quantity_sold) AS total_sold
+FROM orders o
+JOIN menu_items m
+ON o.item_id=m.item_id
+GROUP BY m.item_name
+ORDER BY total_sold DESC;
+
+
+-- Profit Calculation
+SELECT
+item_name,
+selling_price,
+ingredient_cost,
+(selling_price - ingredient_cost) AS profit_per_item
+FROM menu_items;
+
+
+-- Profit vs Wastage
+SELECT
+m.item_name,
+SUM(o.quantity_sold * o.selling_price) AS revenue,
+SUM(w.waste_cost) AS wastage
+FROM menu_items m
+JOIN orders o
+ON m.item_id=o.item_id
+JOIN wastage_logs w
+ON m.item_id=w.item_id
+GROUP BY m.item_name;
+
+
+-- Rank Kitchens
+SELECT
+city,
+SUM(wasted_quantity) AS total_waste,
+
+RANK() OVER(
+ORDER BY SUM(wasted_quantity) DESC
+) AS waste_rank
+
+FROM inventory i
+JOIN kitchens k
+ON i.kitchen_id=k.kitchen_id
+GROUP BY city;
+
+
+-- CTE Example
+WITH item_sales AS
+(
+SELECT
+item_id,
+SUM(quantity_sold) total_sales
+FROM orders
+GROUP BY item_id
+)
+
+SELECT *
+FROM item_sales;
+
+
+-- Dense Rank
+SELECT
+item_name,
+selling_price,
+
+DENSE_RANK() OVER(
+ORDER BY selling_price DESC
+) AS price_rank
+
+FROM menu_items;
+
+
+
+
